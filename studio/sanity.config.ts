@@ -7,7 +7,7 @@ export default defineConfig({
   name: 'default',
   title: 'SessionContact Blog',
 
-  projectId: 'fsoss9ct',
+  projectId: 'n3s7nj4t',
   dataset: 'production',
 
   plugins: [structureTool(), visionTool()],
