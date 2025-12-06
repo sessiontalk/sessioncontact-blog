@@ -1,9 +1,34 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { PortableText } from '@portabletext/react';
-import { sanityClient, queries, getImageUrl } from '../lib/sanity';
+import type { PortableTextComponents } from '@portabletext/react';
+import { sanityClient, queries, getImageUrl, urlFor } from '../lib/sanity';
 import type { Post } from '../types/blog';
 import { SEO } from '../components/SEO';
+
+// Custom components for PortableText rendering
+const portableTextComponents: PortableTextComponents = {
+  types: {
+    image: ({ value }) => {
+      if (!value?.asset) return null;
+      const imageUrl = urlFor(value.asset).width(800).url();
+      return (
+        <figure className="my-8">
+          <img
+            src={imageUrl}
+            alt={value.alt || ''}
+            className="w-full rounded-2xl shadow-lg"
+          />
+          {value.caption && (
+            <figcaption className="text-center text-sm text-foreground-muted mt-3">
+              {value.caption}
+            </figcaption>
+          )}
+        </figure>
+      );
+    },
+  },
+};
 
 export function PostPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -170,7 +195,7 @@ export function PostPage() {
       <section className="py-12 md:py-16">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="prose prose-lg max-w-none prose-headings:text-primary-dark prose-a:text-primary prose-a:no-underline hover:prose-a:underline">
-            {post.body && <PortableText value={post.body} />}
+            {post.body && <PortableText value={post.body} components={portableTextComponents} />}
           </div>
         </div>
       </section>
