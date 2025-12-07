@@ -5,6 +5,11 @@ import type { PortableTextComponents } from '@portabletext/react';
 import { sanityClient, queries, getImageUrl, urlFor } from '../lib/sanity';
 import type { Post } from '../types/blog';
 import { SEO } from '../components/SEO';
+import { ShareButtons } from '../components/ShareButtons';
+import { TableOfContents } from '../components/TableOfContents';
+import { RelatedPosts } from '../components/RelatedPosts';
+import { BackToTop } from '../components/BackToTop';
+import { calculateReadingTime, extractTextFromPortableText, extractHeadingsFromPortableText } from '../lib/utils';
 
 // Custom components for PortableText rendering
 const portableTextComponents: PortableTextComponents = {
@@ -29,21 +34,36 @@ const portableTextComponents: PortableTextComponents = {
     },
   },
   block: {
-    h1: ({ children }) => (
-      <h1 className="text-3xl md:text-4xl font-bold text-primary-dark mt-10 mb-6">
-        {children}
-      </h1>
-    ),
-    h2: ({ children }) => (
-      <h2 className="text-2xl md:text-3xl font-bold text-primary-dark mt-10 mb-4">
-        {children}
-      </h2>
-    ),
-    h3: ({ children }) => (
-      <h3 className="text-xl md:text-2xl font-bold text-primary-dark mt-8 mb-3">
-        {children}
-      </h3>
-    ),
+    h1: ({ children, value }) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const text = (value.children as any[])?.map((c) => c.text || '').join('') || '';
+      const id = text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      return (
+        <h1 id={id} className="text-3xl md:text-4xl font-bold text-primary-dark mt-10 mb-6 scroll-mt-24">
+          {children}
+        </h1>
+      );
+    },
+    h2: ({ children, value }) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const text = (value.children as any[])?.map((c) => c.text || '').join('') || '';
+      const id = text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      return (
+        <h2 id={id} className="text-2xl md:text-3xl font-bold text-primary-dark mt-10 mb-4 scroll-mt-24">
+          {children}
+        </h2>
+      );
+    },
+    h3: ({ children, value }) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const text = (value.children as any[])?.map((c) => c.text || '').join('') || '';
+      const id = text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      return (
+        <h3 id={id} className="text-xl md:text-2xl font-bold text-primary-dark mt-8 mb-3 scroll-mt-24">
+          {children}
+        </h3>
+      );
+    },
     h4: ({ children }) => (
       <h4 className="text-lg md:text-xl font-bold text-primary-dark mt-6 mb-2">
         {children}
@@ -65,6 +85,7 @@ const portableTextComponents: PortableTextComponents = {
 export function PostPage() {
   const { slug } = useParams<{ slug: string }>();
   const [post, setPost] = useState<Post | null>(null);
+  const [relatedPosts, setRelatedPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -77,6 +98,13 @@ export function PostPage() {
         const data = await sanityClient.fetch(queries.postBySlug(slug));
         console.log('Fetched post:', data);
         setPost(data);
+
+        // Fetch related posts if we have categories
+        if (data?.categories && data.categories.length > 0) {
+          const categoryIds = data.categories.map((c: { _id: string }) => c._id);
+          const related = await sanityClient.fetch(queries.relatedPosts(data._id, categoryIds));
+          setRelatedPosts(related || []);
+        }
       } catch (err) {
         console.error('Error fetching post:', err);
         setError('Failed to load post');
@@ -142,6 +170,15 @@ export function PostPage() {
   const authorImageUrl = getImageUrl(post.author?.image?.asset, 80, 80);
   const authorBioImageUrl = getImageUrl(post.author?.image?.asset, 120, 120);
 
+  // Calculate reading time
+  const bodyText = extractTextFromPortableText(post.body || []);
+  const readingTime = calculateReadingTime(bodyText);
+
+  // Extract headings for TOC
+  const headings = extractHeadingsFromPortableText(post.body || []);
+  console.log('Post body blocks:', post.body?.slice(0, 5));
+  console.log('Extracted headings:', headings);
+
   return (
     <article className="min-h-screen">
       <SEO
@@ -192,22 +229,29 @@ export function PostPage() {
             </p>
           )}
 
-          {/* Author & Date */}
-          <div className="flex items-center gap-4">
-            {authorImageUrl && (
-              <img
-                src={authorImageUrl}
-                alt={post.author?.name || 'Author'}
-                className="w-14 h-14 rounded-full object-cover"
-              />
-            )}
-            <div>
-              <p className="font-semibold text-foreground">{post.author?.name}</p>
-              {post.author?.title && (
-                <p className="text-sm text-foreground-muted">{post.author.title}</p>
+          {/* Author, Date & Reading Time */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center gap-4">
+              {authorImageUrl && (
+                <img
+                  src={authorImageUrl}
+                  alt={post.author?.name || 'Author'}
+                  className="w-14 h-14 rounded-full object-cover"
+                />
               )}
-              <p className="text-sm text-foreground-muted">{formattedDate}</p>
+              <div>
+                <p className="font-semibold text-foreground">{post.author?.name}</p>
+                {post.author?.title && (
+                  <p className="text-sm text-foreground-muted">{post.author.title}</p>
+                )}
+                <div className="flex items-center gap-2 text-sm text-foreground-muted">
+                  <span>{formattedDate}</span>
+                  <span>·</span>
+                  <span>{readingTime} min read</span>
+                </div>
+              </div>
             </div>
+            <ShareButtons url={window.location.href} title={post.title} />
           </div>
         </div>
       </section>
@@ -226,6 +270,9 @@ export function PostPage() {
       {/* Content */}
       <section className="py-12 md:py-16">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Table of Contents */}
+          <TableOfContents headings={headings} />
+
           <div className="prose prose-lg max-w-none prose-headings:text-primary-dark prose-a:text-primary prose-a:no-underline hover:prose-a:underline">
             {post.body && <PortableText value={post.body} components={portableTextComponents} />}
           </div>
@@ -257,6 +304,9 @@ export function PostPage() {
         </section>
       )}
 
+      {/* Related Posts */}
+      <RelatedPosts posts={relatedPosts} />
+
       {/* Back to Blog */}
       <section className="py-8">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -281,6 +331,9 @@ export function PostPage() {
           </Link>
         </div>
       </section>
+
+      {/* Back to Top Button */}
+      <BackToTop />
     </article>
   );
 }

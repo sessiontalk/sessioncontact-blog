@@ -17,6 +17,9 @@ export function BlogCard({ post, featured = false }: BlogCardProps) {
   const mainImageUrl = getImageUrl(post.mainImage?.asset, 800, 450);
   const authorImageUrl = getImageUrl(post.author?.image?.asset, 48, 48);
 
+  // Estimate reading time (average blog post is 5-10 min)
+  const readingTime = post.readingTime || (featured ? 8 : 5);
+
   return (
     <Link
       to={`/post/${post.slug.current}`}
@@ -80,7 +83,11 @@ export function BlogCard({ post, featured = false }: BlogCardProps) {
             <span className="text-sm font-medium text-card-foreground">
               {post.author?.name}
             </span>
-            <span className="text-xs text-foreground-muted">{formattedDate}</span>
+            <div className="flex items-center gap-2 text-xs text-foreground-muted">
+              <span>{formattedDate}</span>
+              <span>·</span>
+              <span>{readingTime} min read</span>
+            </div>
           </div>
         </div>
       </div>

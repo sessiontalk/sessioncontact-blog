@@ -176,4 +176,24 @@ export const queries = {
     slug,
     description
   }`,
+
+  // Get related posts by category (excluding current post)
+  relatedPosts: (postId: string, categoryIds: string[]) => `*[_type == "post" && _id != "${postId}" && count((categories[]->_id)[@ in ${JSON.stringify(categoryIds)}]) > 0] | order(publishedAt desc)[0...3] {
+    _id,
+    title,
+    slug,
+    mainImage {
+      asset->{
+        _ref,
+        url
+      },
+      alt
+    },
+    categories[]->{
+      _id,
+      title,
+      slug
+    },
+    publishedAt
+  }`,
 };

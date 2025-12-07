@@ -46,7 +46,7 @@ export function Header() {
               rel="noopener noreferrer"
               className="hidden md:inline-flex items-center px-5 py-2.5 bg-primary text-white font-medium rounded-full hover:bg-primary/90 transition-colors shadow-sm"
             >
-              Get a Demo
+              Free Trial
             </a>
 
             {/* Mobile Menu Button */}
@@ -106,7 +106,7 @@ export function Header() {
                 rel="noopener noreferrer"
                 className="inline-flex items-center justify-center px-5 py-2.5 bg-primary text-white font-medium rounded-full hover:bg-primary/90 transition-colors"
               >
-                Get a Demo
+                Free Trial
               </a>
             </nav>
           </div>
