@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 
 interface Heading {
   text: string;
@@ -8,15 +8,18 @@ interface Heading {
 
 interface TableOfContentsProps {
   headings: Heading[];
+  contentRef?: React.RefObject<HTMLElement | null>;
 }
 
-export function TableOfContents({ headings }: TableOfContentsProps) {
+export function TableOfContents({ headings, contentRef }: TableOfContentsProps) {
   const [activeId, setActiveId] = useState<string>('');
   const [isExpanded, setIsExpanded] = useState(false);
-  const [isVisible, setIsVisible] = useState(true);
-  const endMarkerRef = useRef<HTMLDivElement>(null);
+  const [showSidebar, setShowSidebar] = useState(false);
 
+  // Track active heading
   useEffect(() => {
+    if (headings.length < 3) return;
+
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -36,25 +39,29 @@ export function TableOfContents({ headings }: TableOfContentsProps) {
     return () => observer.disconnect();
   }, [headings]);
 
-  // Hide TOC when scrolled past the article content
+  // Show/hide sidebar based on content visibility
   useEffect(() => {
-    const endMarker = endMarkerRef.current;
-    if (!endMarker) return;
+    if (!contentRef?.current || headings.length < 3) return;
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          // When marker is visible (entering viewport from top), hide TOC
-          // When marker is not visible (above viewport), show TOC
-          setIsVisible(!entry.isIntersecting);
-        });
-      },
-      { rootMargin: '-100px 0px 0px 0px' }
-    );
+    const content = contentRef.current;
 
-    observer.observe(endMarker);
-    return () => observer.disconnect();
-  }, []);
+    const checkVisibility = () => {
+      const rect = content.getBoundingClientRect();
+      const headerHeight = 80;
+
+      // Show sidebar when content is in view (top hasn't scrolled too far past, bottom hasn't entered yet)
+      const contentTop = rect.top;
+      const contentBottom = rect.bottom;
+
+      // Show TOC when we're within the content area
+      const shouldShow = contentTop < window.innerHeight - 200 && contentBottom > headerHeight + 100;
+      setShowSidebar(shouldShow);
+    };
+
+    checkVisibility();
+    window.addEventListener('scroll', checkVisibility, { passive: true });
+    return () => window.removeEventListener('scroll', checkVisibility);
+  }, [contentRef, headings]);
 
   if (headings.length < 3) return null;
 
@@ -78,7 +85,7 @@ export function TableOfContents({ headings }: TableOfContentsProps) {
         >
           <button
             onClick={() => scrollToHeading(id)}
-            className={`text-left text-sm transition-colors hover:text-primary ${
+            className={`text-left text-sm leading-snug transition-colors hover:text-primary ${
               activeId === id
                 ? 'text-primary font-medium'
                 : 'text-foreground-muted'
@@ -109,25 +116,22 @@ export function TableOfContents({ headings }: TableOfContentsProps) {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
           </svg>
         </button>
-        <div className={`transition-all duration-300 overflow-hidden ${isExpanded ? 'max-h-96 pb-4 px-6' : 'max-h-0'}`}>
+        <div className={`transition-all duration-300 overflow-hidden ${isExpanded ? 'max-h-[500px] pb-4 px-6' : 'max-h-0'}`}>
           {tocList}
         </div>
       </nav>
 
-      {/* Desktop: Sticky sidebar TOC on the left */}
+      {/* Desktop: Sticky sidebar TOC */}
       <aside
-        className={`hidden lg:block fixed left-8 xl:left-[calc((100vw-768px)/2-280px)] top-32 w-56 max-h-[calc(100vh-160px)] overflow-y-auto transition-opacity duration-300 ${
-          isVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        className={`hidden lg:block fixed left-[max(1rem,calc((100vw-1200px)/2-220px))] top-28 w-52 max-h-[calc(100vh-150px)] overflow-y-auto transition-all duration-300 ${
+          showSidebar ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4 pointer-events-none'
         }`}
       >
-        <nav className="bg-background-alt rounded-2xl p-5 shadow-sm border border-gray-100">
-          <h2 className="text-sm font-bold text-primary-dark mb-3 uppercase tracking-wide">On this page</h2>
+        <nav className="bg-white rounded-xl p-4 shadow-md border border-gray-100">
+          <h2 className="text-xs font-bold text-primary-dark mb-3 uppercase tracking-wider">On this page</h2>
           {tocList}
         </nav>
       </aside>
-
-      {/* Invisible marker at end of TOC area - place this at the end of article content */}
-      <div ref={endMarkerRef} className="h-0 w-0" aria-hidden="true" />
     </>
   );
 }
