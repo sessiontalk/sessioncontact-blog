@@ -177,8 +177,6 @@ export function PostPage() {
 
   // Extract headings for TOC
   const headings = extractHeadingsFromPortableText(post.body || []);
-  console.log('Post body blocks:', post.body?.slice(0, 5));
-  console.log('Extracted headings:', headings);
 
   return (
     <article className="min-h-screen">
