@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface Heading {
   text: string;
@@ -13,6 +13,8 @@ interface TableOfContentsProps {
 export function TableOfContents({ headings }: TableOfContentsProps) {
   const [activeId, setActiveId] = useState<string>('');
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
+  const endMarkerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -33,6 +35,26 @@ export function TableOfContents({ headings }: TableOfContentsProps) {
 
     return () => observer.disconnect();
   }, [headings]);
+
+  // Hide TOC when scrolled past the article content
+  useEffect(() => {
+    const endMarker = endMarkerRef.current;
+    if (!endMarker) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          // When marker is visible (entering viewport from top), hide TOC
+          // When marker is not visible (above viewport), show TOC
+          setIsVisible(!entry.isIntersecting);
+        });
+      },
+      { rootMargin: '-100px 0px 0px 0px' }
+    );
+
+    observer.observe(endMarker);
+    return () => observer.disconnect();
+  }, []);
 
   if (headings.length < 3) return null;
 
@@ -93,12 +115,19 @@ export function TableOfContents({ headings }: TableOfContentsProps) {
       </nav>
 
       {/* Desktop: Sticky sidebar TOC on the left */}
-      <aside className="hidden lg:block fixed left-8 xl:left-[calc((100vw-768px)/2-280px)] top-32 w-56 max-h-[calc(100vh-160px)] overflow-y-auto">
+      <aside
+        className={`hidden lg:block fixed left-8 xl:left-[calc((100vw-768px)/2-280px)] top-32 w-56 max-h-[calc(100vh-160px)] overflow-y-auto transition-opacity duration-300 ${
+          isVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        }`}
+      >
         <nav className="bg-background-alt rounded-2xl p-5 shadow-sm border border-gray-100">
           <h2 className="text-sm font-bold text-primary-dark mb-3 uppercase tracking-wide">On this page</h2>
           {tocList}
         </nav>
       </aside>
+
+      {/* Invisible marker at end of TOC area - place this at the end of article content */}
+      <div ref={endMarkerRef} className="h-0 w-0" aria-hidden="true" />
     </>
   );
 }
