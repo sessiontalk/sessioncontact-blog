@@ -49,12 +49,17 @@ export function TableOfContents({ headings, contentRef }: TableOfContentsProps) 
       const rect = content.getBoundingClientRect();
       const headerHeight = 80;
 
-      // Show sidebar when content is in view (top hasn't scrolled too far past, bottom hasn't entered yet)
       const contentTop = rect.top;
       const contentBottom = rect.bottom;
 
-      // Show TOC when we're within the content area
-      const shouldShow = contentTop < window.innerHeight - 200 && contentBottom > headerHeight + 100;
+      // Hide sidebar when footer is visible to prevent overlap
+      const footer = document.querySelector('footer');
+      const footerTop = footer ? footer.getBoundingClientRect().top : Infinity;
+
+      // Show TOC when we're within the content area AND footer isn't overlapping
+      const shouldShow = contentTop < window.innerHeight - 200
+        && contentBottom > headerHeight + 100
+        && footerTop > window.innerHeight;
       setShowSidebar(shouldShow);
     };
 
